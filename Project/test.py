@@ -103,3 +103,8 @@ print("word_dict\n" + str(word_dict) + "\n")
 word_dict2 = build_dict2(train_X)
 
 print("word_dict2\n" + str(word_dict2) + "\n")
+
+first2pairs = list(word_dict2.keys())[:2]
+# word_dict2
+# first5vals = [v for v in word_dict2.keys()[:2]]
+print("first2pairs\n" + str(first2pairs) + "\n")
