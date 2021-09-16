@@ -80,7 +80,7 @@ def train(model, train_loader, epochs, optimizer, loss_fn, device):
             
             # TODO: Complete this train method to train the model
             optimizer.zero_grad()
-            redict = model.forward(batch_X)
+            predict = model.forward(batch_X)
             loss = loss_fn(predict, batch_y)
             loss.backward()
             optimizer.step()
