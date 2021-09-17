@@ -11,6 +11,7 @@ import torch.utils.data
 
 from model import LSTMClassifier
 
+
 def model_fn(model_dir):
     """Load the PyTorch model from the `model_dir` directory."""
     print("Loading model.")
@@ -25,7 +26,8 @@ def model_fn(model_dir):
 
     # Determine the device and construct the model.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = LSTMClassifier(model_info['embedding_dim'], model_info['hidden_dim'], model_info['vocab_size'])
+    model = LSTMClassifier(
+        model_info['embedding_dim'], model_info['hidden_dim'], model_info['vocab_size'])
 
     # Load the stored model parameters.
     model_path = os.path.join(model_dir, 'model.pth')
@@ -42,10 +44,12 @@ def model_fn(model_dir):
     print("Done loading model.")
     return model
 
+
 def _get_train_data_loader(batch_size, training_dir):
     print("Get train data loader.")
 
-    train_data = pd.read_csv(os.path.join(training_dir, "train.csv"), header=None, names=None)
+    train_data = pd.read_csv(os.path.join(
+        training_dir, "train.csv"), header=None, names=None)
 
     train_y = torch.from_numpy(train_data[[0]].values).float().squeeze()
     train_X = torch.from_numpy(train_data.drop([0], axis=1).values).long()
@@ -66,27 +70,31 @@ def train(model, train_loader, epochs, optimizer, loss_fn, device):
     loss_fn      - The loss function used for training.
     device       - Where the model and data should be loaded (gpu or cpu).
     """
-    
+
     # TODO: Paste the train() method developed in the notebook here.
 
     for epoch in range(1, epochs + 1):
         model.train()
         total_loss = 0
-        for batch in train_loader:         
+        for batch in train_loader:
             batch_X, batch_y = batch
-            
+
             batch_X = batch_X.to(device)
             batch_y = batch_y.to(device)
-            
+
             # TODO: Complete this train method to train the model
-            optimizer.zero_grad()
-            predict = model.forward(batch_X)
-            loss = loss_fn(predict, batch_y)
-            loss.backward()
-            optimizer.step()
-            
+            optimizer.zero_grad()  # zero the gradients so that previous ones do not accumulate
+
+            # call to the model to perform a prediction
+            prediction = model.forward(batch_X)
+            # calculation of loss function
+            loss = loss_fn(prediction, batch_y)
+            loss.backward()     # calculate the gradients of the loss function
+            optimizer.step()    # call to the optimizer to perform an update of the parameters
+
             total_loss += loss.data.item()
-        print("Epoch: {}, BCELoss: {}".format(epoch, total_loss / len(train_loader)))
+        print("Epoch: {}, BCELoss: {}".format(
+            epoch, total_loss / len(train_loader)))
 
 
 if __name__ == '__main__':
@@ -112,11 +120,16 @@ if __name__ == '__main__':
                         help='size of the vocabulary (default: 5000)')
 
     # SageMaker Parameters
-    parser.add_argument('--hosts', type=list, default=json.loads(os.environ['SM_HOSTS']))
-    parser.add_argument('--current-host', type=str, default=os.environ['SM_CURRENT_HOST'])
-    parser.add_argument('--model-dir', type=str, default=os.environ['SM_MODEL_DIR'])
-    parser.add_argument('--data-dir', type=str, default=os.environ['SM_CHANNEL_TRAINING'])
-    parser.add_argument('--num-gpus', type=int, default=os.environ['SM_NUM_GPUS'])
+    parser.add_argument('--hosts', type=list,
+                        default=json.loads(os.environ['SM_HOSTS']))
+    parser.add_argument('--current-host', type=str,
+                        default=os.environ['SM_CURRENT_HOST'])
+    parser.add_argument('--model-dir', type=str,
+                        default=os.environ['SM_MODEL_DIR'])
+    parser.add_argument('--data-dir', type=str,
+                        default=os.environ['SM_CHANNEL_TRAINING'])
+    parser.add_argument('--num-gpus', type=int,
+                        default=os.environ['SM_NUM_GPUS'])
 
     args = parser.parse_args()
 
@@ -129,7 +142,8 @@ if __name__ == '__main__':
     train_loader = _get_train_data_loader(args.batch_size, args.data_dir)
 
     # Build the model.
-    model = LSTMClassifier(args.embedding_dim, args.hidden_dim, args.vocab_size).to(device)
+    model = LSTMClassifier(
+        args.embedding_dim, args.hidden_dim, args.vocab_size).to(device)
 
     with open(os.path.join(args.data_dir, "word_dict.pkl"), "rb") as f:
         model.word_dict = pickle.load(f)
@@ -154,12 +168,12 @@ if __name__ == '__main__':
         }
         torch.save(model_info, f)
 
-	# Save the word_dict
+        # Save the word_dict
     word_dict_path = os.path.join(args.model_dir, 'word_dict.pkl')
     with open(word_dict_path, 'wb') as f:
         pickle.dump(model.word_dict, f)
 
-	# Save the model parameters
+        # Save the model parameters
     model_path = os.path.join(args.model_dir, 'model.pth')
     with open(model_path, 'wb') as f:
         torch.save(model.cpu().state_dict(), f)
